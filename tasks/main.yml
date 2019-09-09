@@ -1,0 +1,89 @@
+---
+- name: "Install java"
+  become: true
+  apt:
+    name: default-jre
+
+- name: "Install Docker dependencies"
+  become: true
+  apt: name={{item}} state=installed
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+
+- name: "Add Docker GPG apt Key"
+  become: true
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: "Add Docker Repository"
+  become: true
+  apt_repository:
+    repo: deb https://download.docker.com/linux/ubuntu bionic stable
+    state: present
+
+- name: "Install Docker"
+  become: true
+  apt:
+    name: docker-ce
+    update_cache: true
+
+- name: "Install docker-compose"
+  get_url:
+    url: https://github.com/docker/compose/releases/download/1.25.0-rc2/docker-compose-Linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: 0755
+
+- name: "Set vm.max_map_count"
+  become: true
+  shell: sysctl -w vm.max_map_count=262144
+
+- name: "Persist sysctl vm.max_map_count"
+  become: true
+  lineinfile:
+    path: /etc/sysctl.conf
+    line: vm.max_map_count=262144
+    regexp: '^vm.max_map_count='
+
+- name: "Copy docker-compose stuff"
+  become: true
+  copy:
+    src: files/sonarqube-docker
+    dest: /opt/
+
+- name: "Execute template for init script"
+  become: true
+  template:
+    src: files/sonarqube-docker/init-letsencrypt.template
+    dest: /opt/sonarqube-docker/init-letsencrypt.sh
+    mode: 0755
+
+- name: "Execute template for nginx config"
+  become: true
+  template:
+    src: files/sonarqube-docker/data/nginx/app.conf.template
+    dest: /opt/sonarqube-docker/data/nginx/app.conf
+
+- name: "Run init script to obtain initial certificates"
+  become: true
+  shell: ./init-letsencrypt.sh
+  args:
+    chdir: /opt/sonarqube-docker/ 
+
+- name: "Copy systemd service for docker-compose"
+  become: true
+  copy:
+    src: sonar.service
+    dest: /etc/systemd/system/sonar.service
+
+- name: "Ensure sonar service is started"
+  become: true
+  systemd:
+    state: restarted
+    enabled: true
+    name: sonar
+    daemon_reload: true
+

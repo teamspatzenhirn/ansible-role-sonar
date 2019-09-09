@@ -1,0 +1,9 @@
+[Unit]
+Description=Sonarqube
+
+[Service]
+WorkingDirectory=/opt/sonarqube-docker
+ExecStart=/usr/local/bin/docker-compose -f /opt/sonarqube-docker/docker-compose.yml up
+
+[Install]
+WantedBy=multi-user.target
