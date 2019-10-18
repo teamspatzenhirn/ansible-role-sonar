@@ -1,3 +1,3 @@
 [submodule "files/sonarqube-docker"]
 	path = files/sonarqube-docker
-	url = git@git.spatz.wtf:infrastruktur/sonarqube-docker.git
+	url = ../../infrastruktur/sonarqube-docker.git
